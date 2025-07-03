@@ -1,0 +1,306 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <title>Test de détection - Phishing Detector</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 40px auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        
+        h1 {
+            color: #333;
+        }
+        
+        .test-section {
+            margin: 20px 0;
+            padding: 20px;
+            background: #f9f9f9;
+            border-radius: 8px;
+            border: 1px solid #e0e0e0;
+        }
+        
+        .test-url {
+            display: flex;
+            gap: 10px;
+            margin: 10px 0;
+            align-items: center;
+        }
+        
+        .test-url input {
+            flex: 1;
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+        
+        .test-url button {
+            padding: 8px 15px;
+            background: #2196F3;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        
+        .test-url button:hover {
+            background: #1976D2;
+        }
+        
+        .result {
+            margin-top: 10px;
+            padding: 10px;
+            border-radius: 4px;
+            font-size: 14px;
+        }
+        
+        .result.safe {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        
+        .result.danger {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+        
+        .result.error {
+            background: #fff3cd;
+            color: #856404;
+            border: 1px solid #ffeaa7;
+        }
+        
+        .debug-info {
+            margin-top: 10px;
+            padding: 10px;
+            background: #e3f2fd;
+            border-radius: 4px;
+            font-family: monospace;
+            font-size: 12px;
+            white-space: pre-wrap;
+            display: none;
+        }
+        
+        .status-section {
+            margin: 20px 0;
+            padding: 15px;
+            background: #e8f5e9;
+            border-radius: 8px;
+        }
+        
+        .status-item {
+            margin: 5px 0;
+        }
+        
+        .status-item.configured {
+            color: #2e7d32;
+        }
+        
+        .status-item.not-configured {
+            color: #c62828;
+        }
+        
+        .test-list {
+            margin-top: 20px;
+        }
+        
+        .test-list h3 {
+            color: #666;
+            font-size: 16px;
+        }
+        
+        .test-list button {
+            margin: 5px;
+            padding: 6px 12px;
+            background: #ff9800;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 13px;
+        }
+        
+        .test-list button:hover {
+            background: #f57c00;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🧪 Test de détection de phishing</h1>
+        
+        <div class="status-section">
+            <h2>📊 État de la configuration</h2>
+            <div id="configStatus"></div>
+        </div>
+        
+        <div class="test-section">
+            <h2>🔍 Tester une URL</h2>
+            <div class="test-url">
+                <input type="text" id="testUrl" placeholder="https://exemple.com">
+                <button id="testBtn">Tester</button>
+                <button id="debugBtn">🐛 Debug</button>
+            </div>
+            <div id="testResult"></div>
+            <div id="debugInfo" class="debug-info"></div>
+        </div>
+        
+        <div class="test-list">
+            <h3>URLs de test recommandées :</h3>
+            <button class="test-quick" data-url="https://www.google.com">Google (sûr)</button>
+            <button class="test-quick" data-url="http://192.168.1.1/login">IP suspecte</button>
+            <button class="test-quick" data-url="https://amaz0n.com">Homographe (0 au lieu de o)</button>
+            <button class="test-quick" data-url="https://secure-paypal-update.tk">Domaine suspect</button>
+            <button class="test-quick" data-url="https://bit.ly/suspicious">URL raccourcie</button>
+            <button class="test-quick" data-url="https://testdanger.com">Simulation locale</button>
+            
+            <h3 style="margin-top: 20px;">URLs PhishTank récentes :</h3>
+            <p style="color: #666; font-size: 14px;">
+                ⚠️ Pour tester avec de vraies URLs de phishing, visitez 
+                <a href="https://www.phishtank.com/phish_search.php?verified=y&active=y" target="_blank">PhishTank</a>
+                et copiez des URLs vérifiées.
+            </p>
+        </div>
+    </div>
+    
+    <script>
+        // Vérifier l'état de la configuration
+        async function checkConfig() {
+            const status = document.getElementById('configStatus');
+            
+            chrome.storage.local.get(['apiKey_google', 'apiKey_phishtank', 'whitelist', 'history', 'phishingLists'], (result) => {
+                let html = '';
+                
+                // Listes publiques
+                if (result.phishingLists) {
+                    const lists = result.phishingLists;
+                    html += `<div class="status-item configured">✅ Listes publiques actives (${lists.domains?.length || 0} domaines)</div>`;
+                    if (lists.lastUpdate) {
+                        const lastUpdate = new Date(lists.lastUpdate).toLocaleString('fr-FR');
+                        html += `<div class="status-item" style="font-size: 12px; margin-left: 20px;">Dernière MAJ: ${lastUpdate}</div>`;
+                    }
+                } else {
+                    html += '<div class="status-item not-configured">⏳ Listes publiques en cours de téléchargement...</div>';
+                }
+                
+                // Google API
+                if (result.apiKey_google) {
+                    html += '<div class="status-item configured">✅ Google Safe Browsing configuré</div>';
+                } else {
+                    html += '<div class="status-item not-configured">❌ Google Safe Browsing non configuré</div>';
+                }
+                
+                // PhishTank API
+                if (result.apiKey_phishtank) {
+                    html += '<div class="status-item configured">✅ PhishTank API configuré</div>';
+                } else {
+                    html += '<div class="status-item not-configured">❌ PhishTank API non configuré</div>';
+                }
+                
+                // Services gratuits
+                html += '<div class="status-item configured">✅ URLhaus actif (gratuit)</div>';
+                html += '<div class="status-item configured">✅ Détection locale active</div>';
+                
+                // Stats
+                const whitelistCount = (result.whitelist || []).length;
+                const historyCount = (result.history || []).length;
+                html += `<div class="status-item" style="margin-top: 10px; color: #666;">📋 ${whitelistCount} domaines en liste blanche</div>`;
+                html += `<div class="status-item" style="color: #666;">📊 ${historyCount} URLs dans l'historique</div>`;
+                
+                status.innerHTML = html;
+            });
+        }
+        
+        // Test d'une URL
+        document.getElementById('testBtn').addEventListener('click', async () => {
+            const url = document.getElementById('testUrl').value.trim();
+            if (!url) {
+                alert('Veuillez entrer une URL');
+                return;
+            }
+            
+            const resultDiv = document.getElementById('testResult');
+            const debugDiv = document.getElementById('debugInfo');
+            
+            resultDiv.innerHTML = '⏳ Test en cours...';
+            resultDiv.className = 'result';
+            debugDiv.style.display = 'none';
+            
+            chrome.runtime.sendMessage({ action: "scanURL", url: url }, (response) => {
+                if (!response) {
+                    resultDiv.innerHTML = '❌ Erreur de communication avec l\'extension';
+                    resultDiv.className = 'result error';
+                    return;
+                }
+                
+                let resultHtml = '';
+                let className = 'safe';
+                
+                if (response.error) {
+                    resultHtml = `⚠️ Erreur lors du test: ${response.message || 'Erreur inconnue'}`;
+                    className = 'error';
+                } else if (response.whitelisted) {
+                    resultHtml = '🛡️ Site en liste blanche (non vérifié)';
+                    className = 'safe';
+                } else if (response.isPhishing) {
+                    resultHtml = `🚨 SITE DANGEREUX DÉTECTÉ !<br>`;
+                    resultHtml += `Type: ${response.threatType || 'Inconnu'}<br>`;
+                    resultHtml += `Source: ${response.source || 'Inconnu'}`;
+                    if (response.threatScore) {
+                        resultHtml += `<br>Score: ${response.threatScore}%`;
+                    }
+                    className = 'danger';
+                } else {
+                    resultHtml = `✅ Site sûr<br>`;
+                    resultHtml += `Source: ${response.source || 'Détection locale'}`;
+                    className = 'safe';
+                }
+                
+                resultDiv.innerHTML = resultHtml;
+                resultDiv.className = `result ${className}`;
+                
+                // Stocker la réponse pour le debug
+                window.lastResponse = response;
+            });
+        });
+        
+        // Mode debug
+        document.getElementById('debugBtn').addEventListener('click', () => {
+            const debugDiv = document.getElementById('debugInfo');
+            if (window.lastResponse) {
+                debugDiv.textContent = JSON.stringify(window.lastResponse, null, 2);
+                debugDiv.style.display = 'block';
+            } else {
+                alert('Faites d\'abord un test pour voir les informations de debug');
+            }
+        });
+        
+        // Tests rapides
+        document.querySelectorAll('.test-quick').forEach(btn => {
+            btn.addEventListener('click', () => {
+                document.getElementById('testUrl').value = btn.getAttribute('data-url');
+                document.getElementById('testBtn').click();
+            });
+        });
+        
+        // Charger la configuration au démarrage
+        checkConfig();
+        
+        // Rafraîchir toutes les 2 secondes
+        setInterval(checkConfig, 2000);
+    </script>
+</body>
+</html>

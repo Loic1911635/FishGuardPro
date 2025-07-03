@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>FishGuard Pro</title>
+  <link rel="stylesheet" href="popup-pro.css">
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <h2 data-i18n="appName">FishGuard Pro</h2>
+      <select id="languageSelector" class="language-selector">
+        <option value="en">EN</option>
+        <option value="fr">FR</option>
+      </select>
+    </div>
+   
+    <input type="text" id="urlInput" data-i18n-placeholder="enterUrl" placeholder="Enter a URL..." />
+    <button id="scanPageButton" class="btn btn-primary" data-i18n="scanCurrentPage">Scan Current Page</button>
+    <button id="scanLinkButton" class="btn btn-secondary" data-i18n="scanPastedLink">Scan Pasted Link</button>
+    <div id="result"></div>
+   
+    <div class="navigation">
+      <button id="historyBtn" class="nav-btn" data-i18n="history">History</button>
+    </div>
+    
+    <!-- Debug link (hidden by default) -->
+    <div style="text-align: center; margin-top: 10px;">
+      <a href="#" id="debugLink" style="font-size: 11px; color: #999; text-decoration: none;">Debug</a>
+    </div>
+  </div>
+  <script src="languages.js"></script>
+  <script src="popup-pro.js"></script>
+</body>
+</html>
